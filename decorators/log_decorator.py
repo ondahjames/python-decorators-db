@@ -1,27 +1,23 @@
-# decorators/retry_decorator.py
-from functools import wraps
 import time
+from functools import wraps
 
-def retry_on_failure(retries=3, delay=2):
-    """Decorator to retry database operations on transient failure."""
-    def decorator(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            last_exception = None
+def log_queries(func):
+    """Decorator to log SQL queries executed by a function."""
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        query = kwargs.get("query", None)
+        start_time = time.time()
 
-            for attempt in range(1, retries + 1):
-                try:
-                    print(f"[RETRY] Attempt {attempt}/{retries} for {func.__name__}")
-                    return func(*args, **kwargs)
-                except Exception as e:
-                    last_exception = e
-                    print(f"[ERROR] Attempt {attempt} failed: {e}")
-                    if attempt < retries:
-                        print(f"[RETRY] Waiting {delay} seconds before retrying...")
-                        time.sleep(delay)
-                    else:
-                        print("[RETRY] All attempts failed. Raising last exception.")
-                        raise last_exception
+        print(f"[LOG] Executing function: {func.__name__}")
+        if query:
+            print(f"[SQL] Query: {query}")  # fixed: removed typo 'acprint'
 
-        return wrapper
-    return decorator
+        try:
+            result = func(*args, **kwargs)
+        except Exception as e:
+            print(f"[ERROR] {func.__name__} failed: {e}")
+            raise
+        finally:
+            end_time = time.time()
+            duration = round((end_time - start_time) * 1000, 2)
+            log_message = f"{func.__name__} | Query: {query} | Time: {duration}ms\n"
